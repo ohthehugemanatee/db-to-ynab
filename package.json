@@ -1,7 +1,7 @@
 {
   "name": "db-to-ynab",
   "version": "1.0.0",
-  "main": "local.js",
+  "main": "index.js",
   "license": "MIT",
   "scripts": {
     "start": "node index.js",
