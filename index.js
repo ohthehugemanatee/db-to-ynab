@@ -170,8 +170,12 @@ class YNAB extends Browser {
   }
 
   async login() {
+    let ynabUrl = 'http://localhost:3000/testDummies/ynabLogin.html'
     console.log('go to ynab')
-    await this.page.goto('https://app.youneedabudget.com/users/login', { waitUntil: 'networkidle2' })
+    if (!this.testMode) {
+      ynabUrl = 'https://app.youneedabudget.com/users/login'
+    }
+    await this.page.goto(ynabUrl, { waitUntil: 'networkidle2' })
     await this.page.waitForSelector('#login-username')
     await this.page.type('#login-username', this.username)
     await this.page.type('#login-password', this.pass)
@@ -238,16 +242,16 @@ exports.doIt = async (req, res) => {
 
 exports.testIt = async (req, res) => {
   const db = new DB({
-    account: ACCOUNT,
-    branch: BRANCH,
-    pin: PIN,
+    account: '123',
+    branch: '456',
+    pin: '789',
     enableScreenshots: true,
     testMode: true
   })
   const ynab = new YNAB({
-    username: USERNAME,
-    pass: PASS,
-    ynabAccountTitle: YNAB_ACCOUNT_TITLE,
+    username: 'ynabUsername',
+    pass: 'ynabPass',
+    ynabAccountTitle: 'ynabAccountTitle',
     enableScreenshots: true,
     testMode: true
   })
