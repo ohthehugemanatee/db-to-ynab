@@ -4,7 +4,8 @@
   "main": "local.js",
   "license": "MIT",
   "scripts": {
-    "start": "node local.js",
+    "start": "node index.js",
+    "start-dev": "node local.js",
     "lint": "yarn eslint ."
   },
   "dependencies": {
