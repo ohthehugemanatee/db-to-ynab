@@ -4,6 +4,17 @@
 - It includes pending transactions
 - Deployable as a Cloud Function on GCP
 
+## Description
+
+It uses a headless browser to:
+
+- Login to DB
+- Download the CSV of the transactions
+- Convert the CSV to YNAB's format
+- Grab the pending transactions from the page
+- Login to YNAB
+- Do a CSV upload
+
 ## Usage
 
 ### Locally
@@ -31,3 +42,4 @@ Then, you can run a local version by `yarn start` and visiting http://localhost:
   - Node.js 8 Runtime
   - Function to execute: `doIt`
   - The required environment variables
+- Setup a cron job or a health check service to trigger the function periodically
