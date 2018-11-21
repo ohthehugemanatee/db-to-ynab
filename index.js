@@ -179,12 +179,17 @@ class YNAB extends Browser {
     await this.page.waitForSelector('#login-username')
     await this.page.type('#login-username', this.username)
     await this.page.type('#login-password', this.pass)
-    await this.page.click('button.button-primary')
+    if (!this.testMode) {
+      await this.page.click('button.button-primary')
+    }
     console.log('logging in')
   }
 
   async goToAccount() {
     console.log('opening account')
+    if (this.testMode === true) {
+      await this.page.goto('http://localhost:3000/testDummies/ynabAccount.html')
+    }
     await this.page.waitForSelector('div.nav-accounts')
     await this.page.click(`.nav-account-name.user-data[title="${this.ynabAccountTitle}"]`)
     await this.screenshot('ynab-account.png')
