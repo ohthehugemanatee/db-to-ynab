@@ -86,8 +86,8 @@ class DB extends Browser {
   }
 
   async login() {
+    let dbUrl = 'https://raw.githubusercontent.com/ohthehugemanatee/db-to-ynab/testing/testDummies/dbLogin.html'
     console.log('going to db')
-    const dbUrl = 'https://raw.githubusercontent.com/ohthehugemanatee/db-to-ynab/master/testDummies/dbLogin.html'
     if (!this.testMode) {
       dbUrl = 'https://meine.deutsche-bank.de/trxm/db/'
     }
