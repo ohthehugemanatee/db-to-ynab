@@ -23,6 +23,7 @@ const {
 class Browser {
   constructor(props) {
     this.enableScreenshots = props.enableScreenshots
+    this.testMode = props.testMode
   }
 
   async setup() {
@@ -81,11 +82,16 @@ class DB extends Browser {
     this.branch = props.branch
     this.account = props.account
     this.pin = props.pin
+    this.testMode = props.testMode
   }
 
   async login() {
     console.log('going to db')
-    await this.page.goto('https://meine.deutsche-bank.de/trxm/db/')
+    const dbUrl = 'https://raw.githubusercontent.com/ohthehugemanatee/db-to-ynab/master/testDummies/dbLogin.html'
+    if (!this.testMode) {
+      dbUrl = 'https://meine.deutsche-bank.de/trxm/db/'
+    }
+    await this.page.goto(dbUrl)
     await this.page.type('#branch', this.branch)
     await this.page.type('#account', this.account)
     await this.page.type('#pin', this.pin)
@@ -222,6 +228,44 @@ exports.doIt = async (req, res) => {
     await ynab.login()
     await ynab.goToAccount()
     await ynab.uploadCSV(db.convertedCSVPath)
+  } catch (error) {
+    console.error(error)
+    res.status(500).send(error)
+  }
+
+  res.status(200).send('Success')
+}
+
+exports.testIt = async (req, res) => {
+  const db = new DB({
+    account: ACCOUNT,
+    branch: BRANCH,
+    pin: PIN,
+    enableScreenshots: true,
+    testMode: true
+  })
+  const ynab = new YNAB({
+    username: USERNAME,
+    pass: PASS,
+    ynabAccountTitle: YNAB_ACCOUNT_TITLE,
+    enableScreenshots: true,
+    testMode: true
+  })
+
+  try {
+    console.log('Starting test run')
+    await db.setup()
+    await db.login()
+    await db.goToAccount()
+    await db.downloadTransactionFile()
+    await db.convertTransactionFile()
+    await db.downloadPendingTransactions()
+    await db.appendPendingTransactions()
+    await ynab.setup()
+    await ynab.login()
+    await ynab.goToAccount()
+    await ynab.uploadCSV(db.convertedCSVPath)
+    console.log('Test run successful')
   } catch (error) {
     console.error(error)
     res.status(500).send(error)
