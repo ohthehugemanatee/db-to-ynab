@@ -1,10 +1,11 @@
 {
   "name": "db-to-ynab",
   "version": "1.0.0",
-  "main": "local.js",
+  "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "start": "node local.js",
+    "start": "node index.js",
+    "start-dev": "node local.js",
     "lint": "yarn eslint ."
   },
   "dependencies": {

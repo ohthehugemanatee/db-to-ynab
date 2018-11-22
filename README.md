@@ -33,7 +33,7 @@ For YNAB:
 
 `ENABLE_SCREENSHOTS`: for debugging
 
-Then, you can run a local version by `yarn start` and visiting http://localhost:3000 for triggering the function.
+Then, you can run a local version by `yarn start-dev` and visiting http://localhost:3000 for triggering the function.
 
 ### Cloud Functions
 - Setup a new Cloud Function with:
