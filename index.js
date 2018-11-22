@@ -9,6 +9,9 @@ const sleep = require('util').promisify(setTimeout)
 const writeFile = require('util').promisify(fs.writeFile)
 const appendFile = require('util').promisify(fs.appendFile)
 const convertCSV = require('./convertCSV')
+const ynabAPI = require("ynab");
+const util = require('util')
+
 
 const {
   BRANCH,
@@ -17,7 +20,9 @@ const {
   USERNAME,
   PASS,
   ENABLE_SCREENSHOTS,
-  YNAB_ACCOUNT_TITLE
+  YNAB_APIKEY,
+  YNAB_BUDGET,
+  YNAB_ACCOUNT
 } = process.env
 
 class Browser {
@@ -210,7 +215,6 @@ exports.doIt = async (req, res) => {
     ynabAccountTitle: YNAB_ACCOUNT_TITLE,
     enableScreenshots: ENABLE_SCREENSHOTS
   })
-
   try {
     await db.setup()
     await db.login()
@@ -223,6 +227,51 @@ exports.doIt = async (req, res) => {
     await ynab.login()
     await ynab.goToAccount()
     await ynab.uploadCSV(db.convertedCSVPath)
+  } catch (error) {
+    console.error(error)
+    res.status(500).send(error)
+  }
+
+  res.status(200).send('Success')
+}
+
+exports.doItApi = async (req, res) => {
+  /*
+  const db = new DB({
+    account: ACCOUNT,
+    branch: BRANCH,
+    pin: PIN,
+    enableScreenshots: ENABLE_SCREENSHOTS
+  })
+  */
+  const ynab = new ynabAPI.API(YNAB_APIKEY)
+  try {
+    console.log("Listing budgets")
+    const budgetsResponse = await ynab.budgets.getBudgets()
+    const budgets = budgetsResponse.data.budgets
+    let targetBudget = budgets.find(function (budget) {
+      return budget.name === YNAB_BUDGET
+    });
+    if (!targetBudget) {
+      console.log("Target budget not found.")
+      return
+    }
+    console.log(`Found target budget: ${targetBudget.name}`)
+    let targetBudgetId = targetBudget.id
+
+    console.log("Listing Accounts")
+    const accountsResponse = await ynab.accounts.getAccounts(targetBudgetId)
+    const accounts = accountsResponse.data.accounts
+    let targetAccount = accounts.find(function (account) {
+      return account.name === YNAB_ACCOUNT
+    });
+    if (!targetAccount) {
+      console.log("Target account not found.")
+      return
+    }
+    let targetAccountId = targetAccount.id
+    console.log("so far, so good")
+
   } catch (error) {
     console.error(error)
     res.status(500).send(error)
