@@ -10,7 +10,7 @@ const writeFile = require('util').promisify(fs.writeFile)
 const appendFile = require('util').promisify(fs.appendFile)
 const convertCSV = require('./convertCSV')
 const ynabAPI = require("ynab");
-const util = require('util')
+const moment = require('moment');
 
 
 const {
@@ -269,10 +269,45 @@ exports.doItApi = async (req, res) => {
       console.log("Target account not found.")
       return
     }
+    console.log(`Found target account: ${targetAccount.name}`)
     let targetAccountId = targetAccount.id
-    console.log("so far, so good")
+    console.log("Getting Payee list")
+    const payeesResponse = await ynab.payees.getPayees(targetBudgetId)
+    const payees = payeesResponse.data.payees
+    // Parse CSV.
+    transactionFilePath = '/tmp/test-transactions.csv' 
+    if (!transactionFilePath) {
+      reject(new Error('Transactions CSV not found'))
+    }
+    const csvData = fs.readFileSync(transactionFilePath, 'utf-8')
+    const linesExceptFirstFive = csvData.split('\n').slice(4).join('\n')
 
-  } catch (error) {
+    const transactions = (array, current) => {
+      try {
+
+        const transaction = {
+          account_id: targetAccountId,
+          date: moment(current.Buchungstag, 'DD.MM.YYYY').format('YYYY-MM-DD'),
+          memo: current.Verwendungszweck,
+          amount: int((Number(current.Soll) + Number(current.Haben)) * Number(100))
+        }
+        let payeeId = payees.find(function (payee) {
+          return payee.name.toLowerCase() === current['Beg�nstigter / Auftraggeber'].toLowerCase()
+        })
+        if (!payeeId) {
+          transaction.payee_name = current['Beg�nstigter / Auftraggeber']
+        }
+        transaction.payee_id = payeeId
+        array.push(row)
+      } catch (error) {
+        console.log("Problem building the transactions array")
+      }
+      return array
+    }
+    console.dir(transactions())
+
+
+ } catch (error) {
     console.error(error)
     res.status(500).send(error)
   }
