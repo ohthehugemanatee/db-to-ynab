@@ -220,7 +220,6 @@ exports.doIt = async (req, res) => {
     await db.login()
     await db.goToAccount()
     await db.downloadTransactionFile()
-    await db.convertTransactionFile()
     await db.downloadPendingTransactions()
     await db.appendPendingTransactions()
     await ynab.setup()
@@ -236,16 +235,21 @@ exports.doIt = async (req, res) => {
 }
 
 exports.doItApi = async (req, res) => {
-  /*
   const db = new DB({
     account: ACCOUNT,
     branch: BRANCH,
     pin: PIN,
     enableScreenshots: ENABLE_SCREENSHOTS
   })
-  */
   const ynab = new ynabAPI.API(YNAB_APIKEY)
+
   try {
+    /**
+    await db.setup()
+    await db.login()
+    await db.goToAccount()
+    await db.downloadTransactionFile()
+    */
     console.log("Listing budgets")
     const budgetsResponse = await ynab.budgets.getBudgets()
     const budgets = budgetsResponse.data.budgets
@@ -275,22 +279,28 @@ exports.doItApi = async (req, res) => {
     const payeesResponse = await ynab.payees.getPayees(targetBudgetId)
     const payees = payeesResponse.data.payees
     // Parse CSV.
-    transactionFilePath = '/tmp/test-transactions.csv' 
+    const transactionFilePath = '/tmp/88ebe7a4-80d1-4513-951c-48cf8b246c52/Kontoumsaetze_410_551595200_20181126_205500.csv'
+    //const transactionFilePath = db.transactionFilePath
+    console.log("Transaction file path = ", transactionFilePath)
     if (!transactionFilePath) {
       reject(new Error('Transactions CSV not found'))
     }
     const csvData = fs.readFileSync(transactionFilePath, 'utf-8')
     const linesExceptFirstFive = csvData.split('\n').slice(4).join('\n')
+    const buildTransactions = (array, current) => {
+      if (!current.Buchungstag) {
+        return;
+      }
+      console.log("Processing:", current)
 
-    const transactions = (array, current) => {
       try {
-
         const transaction = {
           account_id: targetAccountId,
           date: moment(current.Buchungstag, 'DD.MM.YYYY').format('YYYY-MM-DD'),
           memo: current.Verwendungszweck,
-          amount: int((Number(current.Soll) + Number(current.Haben)) * Number(100))
+          amount: (Number(current.Soll) + Number(current.Haben)) * Number(100)
         }
+        console.log("Transaction  base: ", transaction)
         let payeeId = payees.find(function (payee) {
           return payee.name.toLowerCase() === current['Beg�nstigter / Auftraggeber'].toLowerCase()
         })
@@ -298,13 +308,35 @@ exports.doItApi = async (req, res) => {
           transaction.payee_name = current['Beg�nstigter / Auftraggeber']
         }
         transaction.payee_id = payeeId
-        array.push(row)
+        array.push(transaction)
       } catch (error) {
+        console.dir(error)
         console.log("Problem building the transactions array")
       }
       return array
     }
-    console.dir(transactions())
+    const parseResults = (results) => {
+      const lines = results.data
+      const finalCSV = lines.reduce(buildTransactions, [])
+      results = finalCSV
+      //resolve(Papa.unparse(finalCSV, { quotes: true, newline: '\n' }))
+    }
+
+    const csv = Papa.parse(linesExceptFirstFive, {
+      header: true,
+      complete: parseResults
+    })
+    console.dir("transactions:", csv)
+/**
+		const parseResults = Papa.parse(linesExceptFirstFive, {
+      header: true,
+			complete: function(results) {
+        console.log(results.data)
+				return results.data.reduce(buildTransactions, [])
+			}
+    });
+    console.dir("Transactions: ", parseResults)
+*/
 
 
  } catch (error) {
