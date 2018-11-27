@@ -285,31 +285,38 @@ exports.doItApi = async (req, res) => {
     const csvData = fs.readFileSync(transactionFilePath, 'utf-8')
     const linesExceptFirstFive = csvData.split('\n').slice(4).join('\n')
     const buildTransactions = (array, current) => {
-      if (!current.Buchungstag) {
-        return array;
+      if (!current.Buchungstag || current.Buchungstag === "Kontostand") {
+        return array
       }
-      // console.log("Processing:", current)
-
       try {
         const transaction = {
           account_id: targetAccountId,
           payee_name: current['Beg�nstigter / Auftraggeber'],
           date: moment(current.Buchungstag, 'DD.MM.YYYY').format('YYYY-MM-DD'),
           memo: current.Verwendungszweck,
-          amount: (Number(current.Soll) + Number(current.Haben)) * Number(100)
+          amount: (+current.Soll.replace(/[,.]/g, '')) + (+current.Haben.replace(/[,.]/g, ''))
         }
+        // Import ID. We'll figure out the last digit once the array is built.
+        transaction.import_id = 'YNAB:' + transaction.amount + ':' + transaction.date + ':'
         array.push(transaction)
+        return array
       } catch (error) {
         console.dir(error)
         console.log("Problem building the transactions array")
       }
-      return array
     }
 		const parseResults = Papa.parse(linesExceptFirstFive, {
       header: true
     });
     const transactions = parseResults.data.reduce(buildTransactions, [])
-    console.dir("Transactions: ", transactions)
+    // Generate import_id for transactions.
+    for (var i=0, length=transactions.length; i<length; i++) {
+      transaction = transactions[i]
+      // Append the count of remaining transactions in the array with this import ID.
+      transaction.import_id += transactions.filter(t => t.import_id === transaction.import_id).length
+    }
+    console.dir("Uploading transactions: ", transactions)
+    // Create transactions
 
  } catch (error) {
     console.error(error)
