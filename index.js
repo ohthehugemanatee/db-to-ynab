@@ -317,7 +317,8 @@ exports.doItApi = async (req, res) => {
     }
     console.dir("Uploading transactions: ", transactions)
     // Create transactions
-
+    const transactionsResponse = await ynab.transactions.createTransactions(targetBudgetId, { transactions })
+    console.log("Transaction response: ", transactionsResponse.status)
  } catch (error) {
     console.error(error)
     res.status(500).send(error)
