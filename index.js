@@ -289,9 +289,9 @@ exports.doItApi = async (req, res) => {
     const linesExceptFirstFive = csvData.split('\n').slice(4).join('\n')
     const buildTransactions = (array, current) => {
       if (!current.Buchungstag) {
-        return;
+        return array;
       }
-      console.log("Processing:", current)
+      // console.log("Processing:", current)
 
       try {
         const transaction = {
@@ -300,7 +300,7 @@ exports.doItApi = async (req, res) => {
           memo: current.Verwendungszweck,
           amount: (Number(current.Soll) + Number(current.Haben)) * Number(100)
         }
-        console.log("Transaction  base: ", transaction)
+        //console.log("Transaction  base: ", transaction)
         let payeeId = payees.find(function (payee) {
           return payee.name.toLowerCase() === current['Beg�nstigter / Auftraggeber'].toLowerCase()
         })
@@ -315,29 +315,11 @@ exports.doItApi = async (req, res) => {
       }
       return array
     }
-    const parseResults = (results) => {
-      const lines = results.data
-      const finalCSV = lines.reduce(buildTransactions, [])
-      results = finalCSV
-      //resolve(Papa.unparse(finalCSV, { quotes: true, newline: '\n' }))
-    }
-
-    const csv = Papa.parse(linesExceptFirstFive, {
-      header: true,
-      complete: parseResults
-    })
-    console.dir("transactions:", csv)
-/**
 		const parseResults = Papa.parse(linesExceptFirstFive, {
-      header: true,
-			complete: function(results) {
-        console.log(results.data)
-				return results.data.reduce(buildTransactions, [])
-			}
+      header: true
     });
-    console.dir("Transactions: ", parseResults)
-*/
-
+    const transactions = parseResults.data.reduce(buildTransactions, [])
+    console.dir("Transactions: ", transactions)
 
  } catch (error) {
     console.error(error)
