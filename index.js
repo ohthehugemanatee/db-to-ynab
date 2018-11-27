@@ -244,12 +244,10 @@ exports.doItApi = async (req, res) => {
   const ynab = new ynabAPI.API(YNAB_APIKEY)
 
   try {
-    /**
     await db.setup()
     await db.login()
     await db.goToAccount()
     await db.downloadTransactionFile()
-    */
     console.log("Listing budgets")
     const budgetsResponse = await ynab.budgets.getBudgets()
     const budgets = budgetsResponse.data.budgets
@@ -276,8 +274,7 @@ exports.doItApi = async (req, res) => {
     console.log(`Found target account: ${targetAccount.name}`)
     let targetAccountId = targetAccount.id
     // Parse CSV.
-    const transactionFilePath = '/tmp/88ebe7a4-80d1-4513-951c-48cf8b246c52/Kontoumsaetze_410_551595200_20181126_205500.csv'
-    //const transactionFilePath = db.transactionFilePath
+    const transactionFilePath = db.transactionFilePath
     console.log("Transaction file path = ", transactionFilePath)
     if (!transactionFilePath) {
       reject(new Error('Transactions CSV not found'))
