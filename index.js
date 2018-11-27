@@ -275,9 +275,6 @@ exports.doItApi = async (req, res) => {
     }
     console.log(`Found target account: ${targetAccount.name}`)
     let targetAccountId = targetAccount.id
-    console.log("Getting Payee list")
-    const payeesResponse = await ynab.payees.getPayees(targetBudgetId)
-    const payees = payeesResponse.data.payees
     // Parse CSV.
     const transactionFilePath = '/tmp/88ebe7a4-80d1-4513-951c-48cf8b246c52/Kontoumsaetze_410_551595200_20181126_205500.csv'
     //const transactionFilePath = db.transactionFilePath
@@ -296,18 +293,11 @@ exports.doItApi = async (req, res) => {
       try {
         const transaction = {
           account_id: targetAccountId,
+          payee_name: current['Beg�nstigter / Auftraggeber'],
           date: moment(current.Buchungstag, 'DD.MM.YYYY').format('YYYY-MM-DD'),
           memo: current.Verwendungszweck,
           amount: (Number(current.Soll) + Number(current.Haben)) * Number(100)
         }
-        //console.log("Transaction  base: ", transaction)
-        let payeeId = payees.find(function (payee) {
-          return payee.name.toLowerCase() === current['Beg�nstigter / Auftraggeber'].toLowerCase()
-        })
-        if (!payeeId) {
-          transaction.payee_name = current['Beg�nstigter / Auftraggeber']
-        }
-        transaction.payee_id = payeeId
         array.push(transaction)
       } catch (error) {
         console.dir(error)
