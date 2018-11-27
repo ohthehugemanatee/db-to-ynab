@@ -297,7 +297,8 @@ exports.doItApi = async (req, res) => {
           // Memo can only be 100 chars long.
           memo: current.Verwendungszweck.substring(0, 99),
           // Amount is in "YNAB milliunits" - ie no decimals.
-          amount: (+current.Soll.replace(/[,.]/g, '')) + (+current.Haben.replace(/[,.]/g, ''))
+          amount: (+current.Soll.replace(/[,.]/g, '')) + (+current.Haben.replace(/[,.]/g, '')),
+          cleared: "cleared"
         }
         // Import ID. We'll figure out the last digit once the array is built.
         transaction.import_id = 'YNAB:' + transaction.amount + ':' + transaction.date + ':'
