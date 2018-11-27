@@ -291,9 +291,12 @@ exports.doItApi = async (req, res) => {
       try {
         const transaction = {
           account_id: targetAccountId,
-          payee_name: current['Beg�nstigter / Auftraggeber'],
+          payee_name: current['Beg�nstigter / Auftraggeber'] || '',
+          // Date must be in ISO format, no time.
           date: moment(current.Buchungstag, 'DD.MM.YYYY').format('YYYY-MM-DD'),
-          memo: current.Verwendungszweck,
+          // Memo can only be 100 chars long.
+          memo: current.Verwendungszweck.substring(0, 99),
+          // Amount is in "YNAB milliunits" - ie no decimals.
           amount: (+current.Soll.replace(/[,.]/g, '')) + (+current.Haben.replace(/[,.]/g, ''))
         }
         // Import ID. We'll figure out the last digit once the array is built.
@@ -318,7 +321,11 @@ exports.doItApi = async (req, res) => {
     console.dir("Uploading transactions: ", transactions)
     // Create transactions
     const transactionsResponse = await ynab.transactions.createTransactions(targetBudgetId, { transactions })
-    console.log("Transaction response: ", transactionsResponse.status)
+    // Log a count of what was created.
+    const duplicateCount = transactionsResponse.data.duplicate_import_ids.length
+    const createdTransactions = transactionsResponse.data.transaction_ids.length
+    const message = "Created " + createdTransactions + ", ignored " + duplicateCount + " duplicate transactions"
+    console.log(message)
  } catch (error) {
     console.error(error)
     res.status(500).send(error)
