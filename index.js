@@ -307,16 +307,13 @@ exports.doItApi = async (req, res) => {
   })
 
   try {
-    /*
     await db.setup()
     await db.login()
     await db.goToAccount()
     await db.downloadTransactionFile()
-    */
     await ynab.findBudget()
     await ynab.findAccount()
-    //await ynab.parseCsv(db.transactionFilePath)
-    await ynab.parseCsv('/tmp/88ebe7a4-80d1-4513-951c-48cf8b246c52/Kontoumsaetze_410_551595200_20181126_205500.csv')
+    await ynab.parseCsv(db.transactionFilePath)
     await ynab.submitTransactions()
  } catch (error) {
     console.error(error)
