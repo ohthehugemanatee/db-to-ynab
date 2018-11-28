@@ -293,8 +293,11 @@ exports.doItApi = async (req, res) => {
           date: moment(current.Buchungstag, 'DD.MM.YYYY').format('YYYY-MM-DD'),
           // Memo can only be 100 chars long.
           memo: current.Verwendungszweck.substring(0, 99),
-          // Amount is in "YNAB milliunits" - ie no decimals.
-          amount: (+current.Soll.replace(/[,.]/g, '')) + (+current.Haben.replace(/[,.]/g, '')),
+          // Amount is in "YNAB milliunits" - ie no decimals, *10.
+          amount: (
+            (+current.Soll.replace(/[,.]/g, '')) +
+            (+current.Haben.replace(/[,.]/g, ''))
+          ) * 10,
           cleared: "cleared"
         }
         // Import ID. We'll figure out the last digit once the array is built.
