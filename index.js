@@ -102,6 +102,7 @@ class DB extends Browser {
   }
 
   async getPendingTransactions() {
+    console.log("Getting pending transactions")
     const grabTransactions = () => Promise.resolve(
       Array
         .from(document.querySelectorAll('[headers=pTentry]'))
@@ -114,13 +115,15 @@ class DB extends Browser {
     try {
       await this.page.waitForSelector('.subsequentL')
     } catch (error) {
-      console.log('no pending transactions. moving on..')
       return
     }
     await this.page.hover('.subsequentL')
     await this.screenshot('extra.png')
     const transactions = await this.page.evaluate(grabTransactions)
     this.pendingTransactions = transactions
+    if (this.pendingTransactions.length === 0) {
+      console.log('no pending transactions. moving on..')
+    }
   }
 
   async downloadTransactionFile() {
@@ -214,7 +217,6 @@ class YNAB {
 
   async addPendingTransactions(pendingTransactions) {
     if (pendingTransactions.length === 0) {
-      console.log("No pending transactions found")
       return
     }
     const transactions = this.transactions
@@ -240,7 +242,6 @@ class YNAB {
         transaction.import_id = 'YNAB:' + transaction.amount + ':' + transaction.date + ':'
         transactions.push(transaction)
     }
-    this.transactions = transactions
   }
 
   async submitTransactions() {
@@ -287,11 +288,14 @@ exports.doIt = async (req, res) => {
     await db.goToAccount()
     await db.downloadTransactionFile()
     await db.getPendingTransactions()
-    await ynab.findBudget()
-    await ynab.findAccount()
     await ynab.parseCsv(db.transactionFilePath)
     await ynab.addPendingTransactions(db.pendingTransactions)
+    if (ynab.transactions.length > 0) {
+      await ynab.findBudget()
+      await ynab.findAccount()
+    }
     await ynab.submitTransactions()
+
  } catch (error) {
     console.error(error)
     res.status(500).send(error)
