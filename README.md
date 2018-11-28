@@ -23,6 +23,8 @@ For DB:
 - `BRANCH`: Branch number
 - `ACCOUNT`: Account number
 - `PIN`: PIN code
+- `ACCOUNT_ROW`: (optional) The row number of your account in DB's "Finanz Ubersicht" view. Defaults to 1.
+<img src="/doc/Finanzubersicht.png?raw=true" width="300px" alt="Image of DB Finanz Ubersicht table"/>
 
 For YNAB:
 - `YNAB_APIKEY`: YNAB "Personal access token". [Here's how to get one](https://api.youneedabudget.com/#personal-access-tokens).
