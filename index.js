@@ -174,14 +174,16 @@ class YNAB {
       return budget.name === budgetTitle
     });
     if (!targetBudget) {
-      console.log("Target budget not found.")
-      return
+      throw "Target budget not found"
     }
     console.log(`Found target budget: ${targetBudget.name}`)
     this.targetBudgetId = targetBudget.id
   }
 
   async findAccount() {
+    if (typeof this.targetBudgetId === 'undefined') {
+      this.findBudget()
+    }
     console.log("Listing Accounts")
     const accountsResponse = await this.ynabAPI.accounts.getAccounts(this.targetBudgetId)
     const accounts = accountsResponse.data.accounts
@@ -190,7 +192,7 @@ class YNAB {
       return account.name === accountTitle
     });
     if (!targetAccount) {
-      console.log("Target account not found.")
+      throw "Target account not found."
       return
     }
     console.log(`Found target account: ${targetAccount.name}`)
@@ -248,6 +250,9 @@ class YNAB {
 
   async submitTransactions() {
     const transactions = this.transactions
+    if (transactions.length === 0) {
+      console.log("No transactions to submit.")
+    }
     console.dir("Uploading transactions: ", transactions)
     // Create transactions
     const transactionsResponse = await this.ynabAPI.transactions.createTransactions(this.targetBudgetId, { transactions })
