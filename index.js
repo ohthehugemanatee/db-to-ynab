@@ -176,6 +176,7 @@ class YNAB extends Browser {
   async goToAccount() {
     console.log('opening account')
     await this.page.waitForSelector('div.nav-accounts')
+    await this.page.waitForSelector(`.nav-account-name.user-data[title="${this.ynabAccountTitle}"]`)
     await this.page.click(`.nav-account-name.user-data[title="${this.ynabAccountTitle}"]`)
     await this.screenshot('ynab-account.png')
   }
