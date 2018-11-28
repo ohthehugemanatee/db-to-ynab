@@ -2,3 +2,4 @@ node_modules
 download
 *.png
 *.csv
+.vscode
