@@ -104,7 +104,7 @@ class DB extends Browser {
     console.log('opening account')
   }
 
-  async downloadPendingTransactions() {
+  async getPendingTransactions() {
     const grabTransactions = () => Promise.resolve(
       Array
         .from(document.querySelectorAll('[headers=pTentry]'))
@@ -123,38 +123,12 @@ class DB extends Browser {
     await this.page.hover('.subsequentL')
     await this.screenshot('extra.png')
     const transactions = await this.page.evaluate(grabTransactions)
-    this.pendingTransactionsPath = path.resolve('/tmp', `transactions-${uuid()}.json`)
-    await writeFile(this.pendingTransactionsPath, JSON.stringify(transactions), 'utf8')
-    await this.screenshot('transactions.png')
-  }
-
-  async appendPendingTransactions() {
-    if (!this.pendingTransactionsPath) {
-      return
-    }
-    /* eslint-disable-next-line import/no-dynamic-require,global-require */
-    const pendingTransactions = require(this.pendingTransactionsPath)
-    if (!pendingTransactions.length) {
-      return
-    }
-    const convertedTransactions = pendingTransactions.reduce((converted, transaction) => {
-      const [date, memo, soll, haben] = transaction
-      converted.push([date, '', memo, soll.replace('-', ''), haben])
-      return converted
-    }, [])
-    const convertedTransactionsCSV = Papa.unparse(convertedTransactions, { quotes: true, newline: '\n' })
-    await appendFile(this.convertedCSVPath, `\n${convertedTransactionsCSV}`, 'utf8')
+    this.pendingTransactions = transactions
   }
 
   async downloadTransactionFile() {
     const fileSelector = '#contentContainer > div.pageFunctions > ul > li.csv > a'
     this.transactionFilePath = await this.downloadFileFromSelector(fileSelector)
-  }
-
-  async convertTransactionFile() {
-    const convertedCSV = await convertCSV(this.transactionFilePath)
-    this.convertedCSVPath = path.resolve('/tmp', `converted-${uuid()}.csv`)
-    await writeFile(this.convertedCSVPath, convertedCSV, 'utf8')
   }
 }
 
@@ -163,6 +137,7 @@ class YNAB {
     this.ynabAPI = new ynabAPI.API(props.ynabApiKey),
     this.budgetTitle = props.ynabBudget,
     this.accountTitle = props.ynabAccount
+    this.transactions = []
   }
 
   async findBudget() {
@@ -237,13 +212,36 @@ class YNAB {
       header: true
     });
     const transactions = parseResults.data.reduce(buildTransactions, [])
-    // Generate last digit of import_id, set account Id.
-    for (var i=0, length=transactions.length; i<length; i++) {
-      let transaction = transactions[i]
-      // Append the count of remaining transactions in the array with this import ID.
-      transaction.import_id += transactions.filter(t => t.import_id === transaction.import_id).length
-      // Set the static account_id value.
-      transaction.account_id = this.targetAccountId
+    this.transactions = transactions
+  }
+
+  async addPendingTransactions(pendingTransactions) {
+    if (pendingTransactions.length === 0) {
+      console.log("No pending transactions found")
+      return
+    }
+    const transactions = this.transactions
+    // Append uncleared transactions.
+    for (var i=0, length=pendingTransactions.length; i<length; i++) {
+      let current = pendingTransactions[i]
+      const [date, memo, soll, haben] = current
+      const transaction = {
+        payee_name: '',
+          // Date must be in ISO format, no time.
+          date: moment(date, 'DD.MM.YYYY').format('YYYY-MM-DD'),
+          // Memo can only be 100 chars long.
+          memo: memo.substring(0, 99),
+          // Amount is in "YNAB milliunits" - ie no decimals, *10.
+          amount: (
+            (+soll.replace(/[,.]/g, '')) +
+            (+haben.replace(/[,.]/g, ''))
+          ) * 10,
+          cleared: ""
+
+      }
+        // Import ID. We'll figure out the last digit during submission.
+        transaction.import_id = 'YNAB:' + transaction.amount + ':' + transaction.date + ':'
+        transactions.push(transaction)
     }
     this.transactions = transactions
   }
@@ -252,6 +250,14 @@ class YNAB {
     const transactions = this.transactions
     if (transactions.length === 0) {
       console.log("No transactions to submit.")
+    }
+    // Generate last digit of import_id, set account Id.
+    for (var i=0, length=transactions.length; i<length; i++) {
+      let transaction = transactions[i]
+      // Append the count of remaining transactions in the array with this import ID.
+      transaction.import_id += transactions.filter(t => t.import_id === transaction.import_id).length
+      // Set the static account_id value.
+      transaction.account_id = this.targetAccountId
     }
     console.dir("Uploading transactions: ", transactions)
     // Create transactions
@@ -282,9 +288,11 @@ exports.doIt = async (req, res) => {
     await db.login()
     await db.goToAccount()
     await db.downloadTransactionFile()
+    await db.getPendingTransactions()
     await ynab.findBudget()
     await ynab.findAccount()
     await ynab.parseCsv(db.transactionFilePath)
+    await ynab.addPendingTransactions(db.pendingTransactions)
     await ynab.submitTransactions()
  } catch (error) {
     console.error(error)
