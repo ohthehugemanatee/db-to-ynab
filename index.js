@@ -17,8 +17,6 @@ const {
   BRANCH,
   ACCOUNT,
   PIN,
-  USERNAME,
-  PASS,
   ENABLE_SCREENSHOTS,
   YNAB_APIKEY,
   YNAB_BUDGET,
@@ -262,38 +260,6 @@ class YNAB {
 }
 
 exports.doIt = async (req, res) => {
-  const db = new DB({
-    account: ACCOUNT,
-    branch: BRANCH,
-    pin: PIN,
-    enableScreenshots: ENABLE_SCREENSHOTS
-  })
-  const ynab = new YNAB({
-    username: USERNAME,
-    pass: PASS,
-    ynabAccountTitle: YNAB_ACCOUNT_TITLE,
-    enableScreenshots: ENABLE_SCREENSHOTS
-  })
-  try {
-    await db.setup()
-    await db.login()
-    await db.goToAccount()
-    await db.downloadTransactionFile()
-    await db.downloadPendingTransactions()
-    await db.appendPendingTransactions()
-    await ynab.setup()
-    await ynab.login()
-    await ynab.goToAccount()
-    await ynab.uploadCSV(db.convertedCSVPath)
-  } catch (error) {
-    console.error(error)
-    res.status(500).send(error)
-  }
-
-  res.status(200).send('Success')
-}
-
-exports.doItApi = async (req, res) => {
   const db = new DB({
     account: ACCOUNT,
     branch: BRANCH,
