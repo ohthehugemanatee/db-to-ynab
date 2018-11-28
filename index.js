@@ -97,7 +97,7 @@ class DB extends Browser {
 
   async goToAccount() {
     // Bump target row to account for the header.
-    this.accountRow += 1
+    this.accountRow = parseInt(this.accountRow) + 1
     const buttonSelector = `#contentContainer > table > tbody > tr:nth-child(${this.accountRow}) > td:nth-child(1) > a`
     await this.page.waitForSelector(buttonSelector)
     await this.screenshot('intro.png')
