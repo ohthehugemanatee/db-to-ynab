@@ -6,8 +6,8 @@ const uuid = require('uuid/v4')
 const mkdirp = require('mkdirp')
 const expect = require('expect-puppeteer')
 const sleep = require('util').promisify(setTimeout)
-const ynabAPI = require("ynab");
-const moment = require('moment');
+const ynabAPI = require('ynab')
+const moment = require('moment')
 
 
 const {
@@ -106,7 +106,7 @@ class DB extends Browser {
   }
 
   async getPendingTransactions() {
-    console.log("Getting pending transactions")
+    console.log('Getting pending transactions')
     const grabTransactions = () => Promise.resolve(
       Array
         .from(document.querySelectorAll('[headers=pTentry]'))
@@ -138,22 +138,20 @@ class DB extends Browser {
 
 class YNAB {
   constructor(props) {
-    this.ynabAPI = new ynabAPI.API(props.ynabApiKey),
-    this.budgetTitle = props.ynabBudget,
+    this.ynabAPI = props.ynabAPI
+    this.budgetTitle = props.ynabBudget
     this.accountTitle = props.ynabAccount
     this.transactions = []
   }
 
   async findBudget() {
-    console.log("Listing budgets")
+    console.log('Listing budgets')
     const budgetsResponse = await this.ynabAPI.budgets.getBudgets()
     const budgets = budgetsResponse.data.budgets
     const budgetTitle = this.budgetTitle
-    let targetBudget = budgets.find(function (budget) {
-      return budget.name === budgetTitle
-    });
+    const targetBudget = budgets.find(budget => budget.name === budgetTitle)
     if (!targetBudget) {
-      throw "Target budget not found"
+      throw new Error('Target budget not found')
     }
     console.log(`Found target budget: ${targetBudget.name}`)
     this.targetBudgetId = targetBudget.id
@@ -163,16 +161,13 @@ class YNAB {
     if (typeof this.targetBudgetId === 'undefined') {
       this.findBudget()
     }
-    console.log("Listing Accounts")
+    console.log('Listing Accounts')
     const accountsResponse = await this.ynabAPI.accounts.getAccounts(this.targetBudgetId)
     const accounts = accountsResponse.data.accounts
     const accountTitle = this.accountTitle
-    let targetAccount = accounts.find(function (account) {
-      return account.name === accountTitle
-    });
+    const targetAccount = accounts.find(account => account.name === accountTitle)
     if (!targetAccount) {
-      throw "Target account not found."
-      return
+      throw new Error('Target account not found.')
     }
     console.log(`Found target account: ${targetAccount.name}`)
     this.targetAccountId = targetAccount.id
@@ -181,12 +176,12 @@ class YNAB {
   async parseCsv(transactionFilePath) {
     // Parse CSV.
     if (!transactionFilePath) {
-      reject(new Error('Transactions CSV not found'))
+      throw new Error('Transactions CSV not found')
     }
     const csvData = fs.readFileSync(transactionFilePath, 'utf-8')
     const linesExceptFirstFive = csvData.split('\n').slice(4).join('\n')
     const buildTransactions = (array, current) => {
-      if (!current.Buchungstag || current.Buchungstag === "Kontostand") {
+      if (!current.Buchungstag || current.Buchungstag === 'Kontostand') {
         return array
       }
       try {
@@ -197,25 +192,25 @@ class YNAB {
           date: moment(current.Buchungstag, 'DD.MM.YYYY').format('YYYY-MM-DD'),
           // Memo can only be 100 chars long.
           memo: current.Verwendungszweck.substring(0, 99),
-          // Amount is in "YNAB milliunits" - ie no decimals, *10.
+          // Amount is in 'YNAB milliunits' - ie no decimals, *10.
           amount: (
-            (+current.Soll.replace(/[,.]/g, '')) +
-            (+current.Haben.replace(/[,.]/g, ''))
+            (+current.Soll.replace(/[,.]/g, ''))
+            + (+current.Haben.replace(/[,.]/g, ''))
           ) * 10,
-          cleared: "cleared"
+          cleared: 'cleared'
         }
         // Import ID. We'll figure out the last digit once the array is built.
-        transaction.import_id = 'YNAB:' + transaction.amount + ':' + transaction.date + ':'
+        transaction.import_id = `YNAB:${transaction.amount}:${transaction.date}:`
         array.push(transaction)
         return array
       } catch (error) {
         console.dir(error)
-        console.log("Problem building the transactions array")
+        console.log('Problem building the transactions array')
       }
     }
-		const parseResults = Papa.parse(linesExceptFirstFive, {
+    const parseResults = Papa.parse(linesExceptFirstFive, {
       header: true
-    });
+    })
     const transactions = parseResults.data.reduce(buildTransactions, [])
     this.transactions = transactions
   }
@@ -226,50 +221,51 @@ class YNAB {
     }
     const transactions = this.transactions
     // Append uncleared transactions.
-    for (var i=0, length=pendingTransactions.length; i<length; i++) {
-      let current = pendingTransactions[i]
+    for (let i = 0, length = pendingTransactions.length; i < length; i += 1) {
+      const current = pendingTransactions[i]
       const [date, memo, soll, haben] = current
       const transaction = {
         payee_name: '',
-          // Date must be in ISO format, no time.
-          date: moment(date, 'DD.MM.YYYY').format('YYYY-MM-DD'),
-          // Memo can only be 100 chars long.
-          memo: memo.substring(0, 99),
-          // Amount is in "YNAB milliunits" - ie no decimals, *10.
-          amount: (
-            (+soll.replace(/[,.]/g, '')) +
-            (+haben.replace(/[,.]/g, ''))
-          ) * 10,
-          cleared: ""
-
+        // Date must be in ISO format, no time.
+        date: moment(date, 'DD.MM.YYYY').format('YYYY-MM-DD'),
+        // Memo can only be 100 chars long.
+        memo: memo.substring(0, 99),
+        // Amount is in 'YNAB milliunits' - ie no decimals, *10.
+        amount: (
+          (+soll.replace(/[,.]/g, ''))
+          + (+haben.replace(/[,.]/g, ''))
+        ) * 10,
+        cleared: ''
       }
-        // Import ID. We'll figure out the last digit during submission.
-        transaction.import_id = 'YNAB:' + transaction.amount + ':' + transaction.date + ':'
-        transactions.push(transaction)
+      // Import ID. We'll figure out the last digit during submission.
+      transaction.import_id = `YNAB:${transaction.amount}:${transaction.date}:`
+      transactions.push(transaction)
     }
   }
 
   async submitTransactions() {
     const transactions = this.transactions
     if (transactions.length === 0) {
-      console.log("No transactions to submit.")
+      console.log('No transactions to submit.')
       return
     }
     // Generate last digit of import_id, set account Id.
-    for (var i=0, length=transactions.length; i<length; i++) {
-      let transaction = transactions[i]
+    for (let i = 0, length = transactions.length; i < length; i += 1) {
+      const transaction = transactions[i]
       // Append the count of remaining transactions in the array with this import ID.
-      transaction.import_id += transactions.filter(t => t.import_id === transaction.import_id).length
+      const remainingTrans = transactions.filter(t => t.import_id === transaction.import_id).length
+      transaction.import_id += remainingTrans
       // Set the static account_id value.
       transaction.account_id = this.targetAccountId
     }
-    console.dir("Uploading transactions: ", transactions)
+    console.dir('Uploading transactions: ', transactions)
     // Create transactions
-    const transactionsResponse = await this.ynabAPI.transactions.createTransactions(this.targetBudgetId, { transactions })
+    const targetBudgetId = this.targetBudgetId
+    const transResponse = await this.ynabAPI.transactions.createTransactions(targetBudgetId, { transactions })
     // Log a count of what was created.
-    const duplicateCount = transactionsResponse.data.duplicate_import_ids.length
-    const createdTransactions = transactionsResponse.data.transaction_ids.length
-    const message = "Created " + createdTransactions + ", ignored " + duplicateCount + " duplicate transactions"
+    const duplicateCount = transResponse.data.duplicate_import_ids.length
+    const createdTransactions = transResponse.data.transaction_ids.length
+    const message = `Created ${createdTransactions}, ignored ${duplicateCount} duplicate transactions`
     console.log(message)
   }
 }
@@ -282,7 +278,7 @@ exports.doIt = async (req, res) => {
     enableScreenshots: ENABLE_SCREENSHOTS
   })
   const ynab = new YNAB({
-    ynabApiKey: YNAB_APIKEY,
+    ynabAPI: new ynabAPI.API(YNAB_APIKEY),
     ynabBudget: YNAB_BUDGET,
     ynabAccount: YNAB_ACCOUNT
   })
@@ -300,8 +296,7 @@ exports.doIt = async (req, res) => {
       await ynab.findAccount()
     }
     await ynab.submitTransactions()
-
- } catch (error) {
+  } catch (error) {
     console.error(error)
     res.status(500).send(error)
   }
