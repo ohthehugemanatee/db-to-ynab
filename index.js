@@ -247,6 +247,7 @@ class YNAB {
     const transactions = this.transactions
     if (transactions.length === 0) {
       console.log("No transactions to submit.")
+      return
     }
     // Generate last digit of import_id, set account Id.
     for (var i=0, length=transactions.length; i<length; i++) {
