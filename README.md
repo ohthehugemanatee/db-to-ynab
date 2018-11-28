@@ -10,10 +10,8 @@ It uses a headless browser to:
 
 - Login to DB
 - Download the CSV of the transactions
-- Convert the CSV to YNAB's format
 - Grab the pending transactions from the page
-- Login to YNAB
-- Do a CSV upload
+- Send the transactions to YNAB using the API.
 
 ## Usage
 
@@ -27,11 +25,11 @@ For DB:
 - `PIN`: PIN code
 
 For YNAB:
-- `USERNAME`: Account username
-- `PASS`: Password
-- `YNAB_ACCOUNT_TITLE`: Account title to sync the transactions into
+- `YNAB_APIKEY`: YNAB "Personal access token". [Here's how to get one](https://api.youneedabudget.com/#personal-access-tokens).
+- `YNAB_BUDGET`: Budget title to sync the transactions into
+- `YNAB_ACCOUNT`: Account title to sync the transactions into
 
-`ENABLE_SCREENSHOTS`: for debugging
+`ENABLE_SCREENSHOTS`: for debugging the headless browser.
 
 Then, you can run a local version by `yarn start-dev` and visiting http://localhost:3000 for triggering the function.
 
