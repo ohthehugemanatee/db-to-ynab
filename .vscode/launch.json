@@ -1,0 +1,23 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Launch YNAB API based sync",
+      "program": "${workspaceFolder}/local.js",
+      "env": {
+        "AWS_REGION":"us-east-1",
+        "ACCOUNT":"5515952",
+        "BRANCH":"410",
+        "PIN":"99617",
+        "YNAB_BUDGET":"Cam and Bryn's budget",
+        "YNAB_ACCOUNT":"DB Personal",
+        "YNAB_APIKEY":"526650b2cff9d645e0b95396144d9cea6c4419ac6bb5eefe5f40bc4d5c2512f3"
+      },
+    }
+  ]
+}
