@@ -6,9 +6,6 @@ const uuid = require('uuid/v4')
 const mkdirp = require('mkdirp')
 const expect = require('expect-puppeteer')
 const sleep = require('util').promisify(setTimeout)
-const writeFile = require('util').promisify(fs.writeFile)
-const appendFile = require('util').promisify(fs.appendFile)
-const convertCSV = require('./convertCSV')
 const ynabAPI = require("ynab");
 const moment = require('moment');
 
