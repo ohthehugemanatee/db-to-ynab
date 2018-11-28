@@ -191,7 +191,8 @@ class YNAB {
       }
       try {
         const transaction = {
-          payee_name: current['Beg�nstigter / Auftraggeber'] || '',
+          // Payee name can only be 100 chars long.
+          payee_name: current['Beg�nstigter / Auftraggeber'].substring(0, 99) || '',
           // Date must be in ISO format, no time.
           date: moment(current.Buchungstag, 'DD.MM.YYYY').format('YYYY-MM-DD'),
           // Memo can only be 100 chars long.
