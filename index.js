@@ -14,6 +14,7 @@ const {
   BRANCH,
   ACCOUNT,
   PIN,
+  ACCOUNT_ROW,
   ENABLE_SCREENSHOTS,
   YNAB_APIKEY,
   YNAB_BUDGET,
@@ -81,6 +82,7 @@ class DB extends Browser {
     this.branch = props.branch
     this.account = props.account
     this.pin = props.pin
+    this.accountRow = props.accountRow || 1
   }
 
   async login() {
@@ -94,18 +96,30 @@ class DB extends Browser {
   }
 
   async goToAccount() {
-    const buttonSelector = '#contentContainer > table > tbody > tr:nth-child(2) > td:nth-child(1) > a'
+    // Bump target row to account for the header.
+    this.accountRow = parseInt(this.accountRow) + 1
+    const buttonSelector = `#contentContainer > table > tbody > tr:nth-child(${this.accountRow}) > td:nth-child(1) > a`
     await this.page.waitForSelector(buttonSelector)
     await this.screenshot('intro.png')
     await this.page.click(buttonSelector)
     console.log('opening account')
-    await this.page.waitForSelector('#periodFixed')
-    await this.page.click('#periodFixed')
-    const refreshButtonSelector = '#contentContainer div#formId.formContainer form#accountTurnoversForm div.formAction input.button'
-    await this.page.click(refreshButtonSelector)
+    const pageTitle = await this.page.title()
+    this.creditCard = 1
+    if (pageTitle.indexOf('Kreditkartentransaktionen') === -1) {
+      this.creditCard = 0
+      await this.page.waitForSelector('#periodFixed')
+      await this.page.click('#periodFixed')
+      const refreshButtonSelector = '#contentContainer div#formId.formContainer form#accountTurnoversForm div.formAction input.button'
+      await this.page.click(refreshButtonSelector)
+    }
   }
 
   async getPendingTransactions() {
+    if (this.creditCard === 1) {
+      console.log('No pending transactions for credit cards')
+      this.pendingTransactions = []
+      return
+    }
     console.log('Getting pending transactions')
     const grabTransactions = () => Promise.resolve(
       Array
@@ -180,6 +194,11 @@ class YNAB {
     }
     const csvData = fs.readFileSync(transactionFilePath, 'utf-8')
     const linesExceptFirstFive = csvData.split('\n').slice(4).join('\n')
+    const parseResults = Papa.parse(linesExceptFirstFive, {
+      header: true
+    })
+    let transactions = []
+    // Build transactions for checking.
     const buildTransactions = (array, current) => {
       if (!current.Buchungstag || current.Buchungstag === 'Kontostand') {
         return array
@@ -208,10 +227,38 @@ class YNAB {
         console.log('Problem building the transactions array')
       }
     }
-    const parseResults = Papa.parse(linesExceptFirstFive, {
-      header: true
-    })
-    const transactions = parseResults.data.reduce(buildTransactions, [])
+    if (this.creditCard === 0) {
+      transactions = parseResults.data.reduce(buildTransactions, [])
+    }
+    // Build transactions for credit.
+    const buildCreditTransactions = (array, current) => {
+      if (!current.Belegdatum || current.Belegdatum === 'Online-Saldo:') {
+        return array
+      }
+      try {
+        const transaction = {
+          // Payee name can only be 50 chars long.
+          payee_name: current.Verwendungszweck.substring(0, 49) || '',
+          // Date must be in ISO format, no time.
+          date: moment(current.Belegdatum, 'DD.MM.YYYY').format('YYYY-MM-DD'),
+          // Memo can only be 100 chars long.
+          memo: current.Verwendungszweck.substring(0, 99),
+          // Amount is in 'YNAB milliunits' - ie no decimals, *10.
+          amount: current.Betrag.replace(/[, .]/g, '') * 10,
+          cleared: 'cleared'
+        }
+        // Import ID. We'll figure out the last digit once the array is built.
+        transaction.import_id = `YNAB:${transaction.amount}:${transaction.date}:`
+        array.push(transaction)
+        return array
+      } catch (error) {
+        console.dir(error)
+        console.log('Problem building the transactions array')
+      }
+    }
+    if (this.creditCard === 1) {
+      transactions = parseResults.data.reduce(buildCreditTransactions, [])
+    }
     this.transactions = transactions
   }
 
@@ -275,6 +322,7 @@ exports.doIt = async (req, res) => {
     account: ACCOUNT,
     branch: BRANCH,
     pin: PIN,
+    accountRow: ACCOUNT_ROW,
     enableScreenshots: ENABLE_SCREENSHOTS
   })
   const ynab = new YNAB({
@@ -289,6 +337,7 @@ exports.doIt = async (req, res) => {
     await db.goToAccount()
     await db.downloadTransactionFile()
     await db.getPendingTransactions()
+    ynab.creditCard = db.creditCard
     await ynab.parseCsv(db.transactionFilePath)
     await ynab.addPendingTransactions(db.pendingTransactions)
     if (ynab.transactions.length > 0) {
