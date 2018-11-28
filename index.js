@@ -14,6 +14,7 @@ const {
   BRANCH,
   ACCOUNT,
   PIN,
+  ACCOUNT_ROW,
   USERNAME,
   PASS,
   ENABLE_SCREENSHOTS,
@@ -81,6 +82,7 @@ class DB extends Browser {
     this.branch = props.branch
     this.account = props.account
     this.pin = props.pin
+    this.accountRow = props.accountRow || 1
   }
 
   async login() {
@@ -94,7 +96,9 @@ class DB extends Browser {
   }
 
   async goToAccount() {
-    const buttonSelector = '#contentContainer > table > tbody > tr:nth-child(2) > td:nth-child(1) > a'
+    // Bump target row to account for the header.
+    this.accountRow += 1
+    const buttonSelector = `#contentContainer > table > tbody > tr:nth-child(${this.accountRow}) > td:nth-child(1) > a`
     await this.page.waitForSelector(buttonSelector)
     await this.screenshot('intro.png')
     await this.page.click(buttonSelector)
@@ -202,6 +206,7 @@ exports.doIt = async (req, res) => {
     account: ACCOUNT,
     branch: BRANCH,
     pin: PIN,
+    accountRow: ACCOUNT_ROW,
     enableScreenshots: ENABLE_SCREENSHOTS
   })
   const ynab = new YNAB({
