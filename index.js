@@ -103,10 +103,13 @@ class DB extends Browser {
     await this.screenshot('intro.png')
     await this.page.click(buttonSelector)
     console.log('opening account')
-    await this.page.waitForSelector('#periodFixed')
-    await this.page.click('#periodFixed')
-    const refreshButtonSelector = '#contentContainer div#formId.formContainer form#accountTurnoversForm div.formAction input.button'
-    await this.page.click(refreshButtonSelector)
+    const pageTitle = await this.page.title()
+    if (pageTitle.indexOf('Kreditkartentransaktionen') === -1) {
+      await this.page.waitForSelector('#periodFixed')
+      await this.page.click('#periodFixed')
+      const refreshButtonSelector = '#contentContainer div#formId.formContainer form#accountTurnoversForm div.formAction input.button'
+      await this.page.click(refreshButtonSelector)
+    }
   }
 
   async getPendingTransactions() {
