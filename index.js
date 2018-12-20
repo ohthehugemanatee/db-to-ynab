@@ -341,6 +341,7 @@ exports.doIt = async (req, res) => {
     console.dir(error)
     console.log(db.page.content())
     console.log('Problem downloading transactions from DB')
+    res.status(500).send(error)
   }
   try {
     ynab.creditCard = db.creditCard
@@ -354,6 +355,7 @@ exports.doIt = async (req, res) => {
     res.status(200).send('Success')
   } catch (error) {
     console.error(error)
+    console.log('Problem uploading transactions to YNAB')
     res.status(500).send(error)
   }
 }
