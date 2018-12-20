@@ -349,8 +349,8 @@ exports.doIt = async (req, res) => {
     if (ynab.transactions.length > 0) {
       await ynab.findBudget()
       await ynab.findAccount()
+      await ynab.submitTransactions()
     }
-    await ynab.submitTransactions()
     res.status(200).send('Success')
   } catch (error) {
     console.error(error)
