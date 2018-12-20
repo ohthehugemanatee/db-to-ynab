@@ -337,6 +337,12 @@ exports.doIt = async (req, res) => {
     await db.goToAccount()
     await db.downloadTransactionFile()
     await db.getPendingTransactions()
+  } catch (error) {
+    console.dir(error)
+    console.log(db.page.content())
+    console.log('Problem downloading transactions from DB')
+  }
+  try {
     ynab.creditCard = db.creditCard
     await ynab.parseCsv(db.transactionFilePath)
     await ynab.addPendingTransactions(db.pendingTransactions)
