@@ -351,10 +351,9 @@ exports.doIt = async (req, res) => {
       await ynab.findAccount()
     }
     await ynab.submitTransactions()
+    res.status(200).send('Success')
   } catch (error) {
     console.error(error)
     res.status(500).send(error)
   }
-
-  res.status(200).send('Success')
 }
