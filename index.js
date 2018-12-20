@@ -231,7 +231,7 @@ class YNAB {
           (+soll.replace(/[,.]/g, ''))
           + (+haben.replace(/[,.]/g, ''))
         ) * 10,
-        cleared: ''
+        cleared: 'uncleared'
       }
       // Import ID. We'll figure out the last digit during submission.
       transaction.import_id = `YNAB:${transaction.amount}:${transaction.date}:`
