@@ -204,9 +204,18 @@ class YNAB {
         return array
       }
       try {
+        const payee_name = function (row) {
+          if (row['Beg�nstigter / Auftraggeber'].length > 0) {
+            return row['Beg�nstigter / Auftraggeber'].substring(0, 49);
+          }
+          if (row.Verwendungszweck.indexOf('//') === -1) {
+            return '';
+          }
+          return row.Verwendungszweck.split('//')[0].substring(0,49);
+        };
         const transaction = {
           // Payee name can only be 100 chars long.
-          payee_name: current['Beg�nstigter / Auftraggeber'].substring(0, 49) || '',
+          payee_name: payee_name(current),
           // Date must be in ISO format, no time.
           date: moment(current.Buchungstag, 'DD.MM.YYYY').format('YYYY-MM-DD'),
           // Memo can only be 100 chars long.
@@ -347,7 +356,7 @@ exports.doIt = async (req, res) => {
     ynab.creditCard = db.creditCard
     await ynab.parseCsv(db.transactionFilePath)
     await ynab.addPendingTransactions(db.pendingTransactions)
-    if (ynab.transactions.length > 0) {
+   if (ynab.transactions.length > 0) {
       await ynab.findBudget()
       await ynab.findAccount()
       await ynab.submitTransactions()
