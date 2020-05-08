@@ -8,6 +8,7 @@ const expect = require('expect-puppeteer')
 const sleep = require('util').promisify(setTimeout)
 const ynabAPI = require('ynab')
 const moment = require('moment')
+var dbUser = {}
 
 var ClientOAuth2 = require('client-oauth2')
 const dbAuth = new ClientOAuth2({
@@ -367,12 +368,8 @@ exports.authorized = function (req, res) {
           console.log(updatedUser !== user) //=> true
           console.log(updatedUser.accessToken)
       })
-      console.log("Success!")
-      // Sign API requests on behalf of the current user.
-      /*user.sign({
-          method: 'get',
-          url: 'http://example.com'
-      }) */
+      console.log("Successfully authorized!")
+      dbUser = user
       res.status(200).send("Successfully authorized")
   })
 }
@@ -384,13 +381,15 @@ exports.doIt = async (req, res) => {
       clientSecret: DB_CLIENT_SECRET,
     })
     try {
-      await dbAPI.getConfig()
-      dbAPI.authorize(req, res)
+      if (!dbUser.hasOwnProperty('accessToken')) {
+        dbAPI.authorize(req, res)
+      }
     } catch (error) {
     console.error(error)
     console.log('Error caught')
     res.status(500).send(error)
     }
+    console.log("Run succeeded")
     res.status(200).send('Success')
     return
   }
