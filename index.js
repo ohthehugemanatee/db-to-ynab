@@ -65,6 +65,25 @@ class DBAPI {
         res.status(200).send("Successfully authorized")
     })
   }
+
+  getAccounts = async () => {
+    console.log("getting accounts")
+    console.log(this.dbUser)
+    var Client = require('node-rest-client').Client;
+ 
+    var client = new Client();
+    var args = {
+      data: { },
+      headers: { 
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + this.dbUser.accessToken
+      }
+    }
+    console.log(args)
+    client.get("https://simulator-api.db.com/gw/dbapi/v1/cashAccounts", args, function (data, response) {
+        console.log(data);
+    });
+  }
 }
 
 class YNAB {
@@ -265,6 +284,7 @@ exports.doIt = function (req, res) {
       console.log('No access token detected, re-authorizing')
       dbAPI.authorize(req, res)
     }
+    dbAPI.getAccounts()
     res.status(200).send("Reached end of processing")
   } catch (error) {
   console.error(error)
