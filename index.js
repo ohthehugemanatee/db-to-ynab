@@ -1,11 +1,8 @@
-const puppeteer = require('puppeteer')
 const Papa = require('papaparse')
 const path = require('path')
 const fs = require('fs')
 const uuid = require('uuid/v4')
 const mkdirp = require('mkdirp')
-const expect = require('expect-puppeteer')
-const sleep = require('util').promisify(setTimeout)
 const ynabAPI = require('ynab')
 const moment = require('moment')
 var dbUser = {}
@@ -52,135 +49,6 @@ class DBAPI {
   authorize = function(req, res) {
     var uri = dbAuth.code.getUri()
     res.redirect(uri)
-  }
-}
-
-class Browser {
-  constructor(props) {
-    this.enableScreenshots = props.enableScreenshots
-  }
-
-  async setup() {
-    this.browser = await await puppeteer.launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    })
-    this.page = await this.browser.newPage()
-  }
-
-  async newPage() {
-    this.page.close()
-    this.page = await this.browser.newPage()
-  }
-
-  async close() {
-    this.browser.close()
-  }
-
-  async downloadFileFromSelector(selector) {
-    await this.page.waitForSelector(selector)
-    const downloadPath = path.resolve('/tmp', uuid())
-    mkdirp(downloadPath)
-    console.log('Downloading file to:', downloadPath)
-    /* eslint-disable-next-line no-underscore-dangle */
-    await this.page._client.send('Page.setDownloadBehavior', { behavior: 'allow', downloadPath })
-    await expect(this.page).toClick(selector)
-    const filename = await this.waitForFileToDownload(downloadPath)
-    return path.resolve(downloadPath, filename)
-  }
-
-  /* eslint-disable-next-line class-methods-use-this */
-  async waitForFileToDownload(downloadPath) {
-    console.log(`Waiting for file to be downloaded ${downloadPath}`)
-    let filename
-    while (!filename || filename.endsWith('.crdownload')) {
-      [filename] = fs.readdirSync(downloadPath)
-      await sleep(500) // eslint-disable-line no-await-in-loop
-    }
-    console.log('Download finished!')
-    return filename
-  }
-
-  async screenshot(filename) {
-    if (!this.enableScreenshots) {
-      return
-    }
-    const screenshotPath = path.resolve('/tmp', filename)
-    await this.page.screenshot({ path: screenshotPath })
-    console.log(`Screenshot taken: ${screenshotPath}`)
-  }
-}
-
-class DB extends Browser {
-  constructor(props) {
-    super(props)
-    this.branch = props.branch
-    this.account = props.account
-    this.pin = props.pin
-    this.accountRow = props.accountRow || 1
-  }
-
-  async login() {
-    console.log('going to db')
-    await this.page.goto('https://meine.deutsche-bank.de/trxm/db/')
-    await this.page.type('#branch', this.branch)
-    await this.page.type('#account', this.account)
-    await this.page.type('#pin', this.pin)
-    await this.page.click('.button.nextStep')
-    console.log('logging in')
-  }
-
-  async goToAccount() {
-    // Bump target row to account for the header.
-    this.accountRow = parseInt(this.accountRow) + 1
-    const buttonSelector = `#contentContainer > table > tbody > tr:nth-child(${this.accountRow}) > td:nth-child(1) > a`
-    await this.page.waitForSelector(buttonSelector)
-    await this.screenshot('intro.png')
-    await this.page.click(buttonSelector)
-    console.log('opening account')
-    const pageTitle = await this.page.title()
-    this.creditCard = 1
-    if (pageTitle.indexOf('Kreditkartentransaktionen') === -1) {
-      this.creditCard = 0
-      await this.page.waitForSelector('#periodFixed')
-      await this.page.click('#periodFixed')
-      const refreshButtonSelector = '#contentContainer div#formId.formContainer form#accountTurnoversForm div.formAction input.button'
-      await this.page.click(refreshButtonSelector)
-    }
-  }
-
-  async getPendingTransactions() {
-    if (this.creditCard === 1) {
-      console.log('No pending transactions for credit cards')
-      this.pendingTransactions = []
-      return
-    }
-    console.log('Getting pending transactions')
-    const grabTransactions = () => Promise.resolve(
-      Array
-        .from(document.querySelectorAll('[headers=pTentry]'))
-        .map(p => p.parentNode)
-        .map(tr => Array
-          .from(tr.querySelectorAll('td'))
-          .map(trr => trr.innerText)
-        )
-    )
-    try {
-      await this.page.waitForSelector('.subsequentL')
-    } catch (error) {
-      return
-    }
-    await this.page.hover('.subsequentL')
-    await this.screenshot('extra.png')
-    const transactions = await this.page.evaluate(grabTransactions)
-    this.pendingTransactions = transactions
-    if (this.pendingTransactions.length === 0) {
-      console.log('no pending transactions. moving on..')
-    }
-  }
-
-  async downloadTransactionFile() {
-    const fileSelector = '#contentContainer > div.pageFunctions > ul > li.csv > a'
-    this.transactionFilePath = await this.downloadFileFromSelector(fileSelector)
   }
 }
 
@@ -375,49 +243,20 @@ exports.authorized = function (req, res) {
 }
 
 exports.doIt = async (req, res) => {
-  if (DB_API_ENABLED) {
-    const dbAPI = new DBAPI({
-      clientId: DB_CLIENT_ID,
-      clientSecret: DB_CLIENT_SECRET,
-    })
-    try {
-      if (!dbUser.hasOwnProperty('accessToken')) {
-        dbAPI.authorize(req, res)
-      }
-    } catch (error) {
-    console.error(error)
-    console.log('Error caught')
-    res.status(500).send(error)
-    }
-    console.log("Run succeeded")
-    res.status(200).send('Success')
-    return
-  }
-  const db = new DB({
-    account: ACCOUNT,
-    branch: BRANCH,
-    pin: PIN,
-    accountRow: ACCOUNT_ROW,
-    enableScreenshots: ENABLE_SCREENSHOTS
+  const dbAPI = new DBAPI({
+    clientId: DB_CLIENT_ID,
+    clientSecret: DB_CLIENT_SECRET,
   })
-  const ynab = new YNAB({
-    ynabAPI: new ynabAPI.API(YNAB_APIKEY),
-    ynabBudget: YNAB_BUDGET,
-    ynabAccount: YNAB_ACCOUNT
-  })
-
   try {
-    await db.setup()
-    await db.login()
-    await db.goToAccount()
-    await db.downloadTransactionFile()
-    await db.getPendingTransactions()
+    if (!dbUser.hasOwnProperty('accessToken')) {
+      dbAPI.authorize(req, res)
+    }
   } catch (error) {
-    console.dir(error)
-    console.log(db.page.content())
-    console.log('Problem downloading transactions from DB')
-    res.status(500).send(error)
+  console.error(error)
+  console.log('Error caught')
+  res.status(500).send(error)
   }
+  /**
   try {
     ynab.creditCard = db.creditCard
     await ynab.parseCsv(db.transactionFilePath)
@@ -432,5 +271,5 @@ exports.doIt = async (req, res) => {
     console.error(error)
     console.log('Problem uploading transactions to YNAB')
     res.status(500).send(error)
-  }
+  }*/
 }
