@@ -252,7 +252,7 @@ exports.authorized = function (req, res) {
   }).renew(req, res)
 }
 
-exports.doIt = async (req, res) => {
+exports.doIt = function (req, res) {
   const dbAPI = new DBAPI({
     clientId: DB_CLIENT_ID,
     clientSecret: DB_CLIENT_SECRET,
@@ -260,9 +260,12 @@ exports.doIt = async (req, res) => {
     dbUser: dbUser
   })
   try {
+    console.log(dbUser)
     if (!dbUser.hasOwnProperty('accessToken')) {
+      console.log('No access token detected, re-authorizing')
       dbAPI.authorize(req, res)
     }
+    res.status(200).send("Reached end of processing")
   } catch (error) {
   console.error(error)
   console.log('Error caught')
