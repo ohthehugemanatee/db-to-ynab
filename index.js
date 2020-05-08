@@ -9,6 +9,15 @@ const sleep = require('util').promisify(setTimeout)
 const ynabAPI = require('ynab')
 const moment = require('moment')
 
+var ClientOAuth2 = require('client-oauth2')
+const dbAuth = new ClientOAuth2({
+  clientId: process.env.DB_CLIENT_ID,
+  clientSecret: process.env.DB_CLIENT_SECRET,
+  accessTokenUri: 'https://simulator-api.db.com/gw/oidc/token',
+  authorizationUri: 'https://simulator-api.db.com/gw/oidc/authorize',
+  redirectUri: 'https://cvert-dev.germany.vertesi.com/authorized',
+  scopes: ['read_transactions', 'read_accounts', 'read_credit_cards_list_with_details', 'read_credit_card_transactions']
+}) 
 
 const {
   BRANCH,
@@ -39,8 +48,9 @@ class DBAPI {
       console.log(error)
     }
   }
-  async authorize() {
-    
+  authorize = function(req, res) {
+    var uri = dbAuth.code.getUri()
+    res.redirect(uri)
   }
 }
 
@@ -349,6 +359,24 @@ class YNAB {
   }
 }
 
+exports.authorized = function (req, res) {
+  dbAuth.code.getToken(req.originalUrl)
+  .then(function (user) {
+      // Refresh the current users access token.
+      user.refresh().then(function (updatedUser) {
+          console.log(updatedUser !== user) //=> true
+          console.log(updatedUser.accessToken)
+      })
+      console.log("Success!")
+      // Sign API requests on behalf of the current user.
+      /*user.sign({
+          method: 'get',
+          url: 'http://example.com'
+      }) */
+      res.status(200).send("Successfully authorized")
+  })
+}
+
 exports.doIt = async (req, res) => {
   if (DB_API_ENABLED) {
     const dbAPI = new DBAPI({
@@ -357,6 +385,7 @@ exports.doIt = async (req, res) => {
     })
     try {
       await dbAPI.getConfig()
+      dbAPI.authorize(req, res)
     } catch (error) {
     console.error(error)
     console.log('Error caught')
