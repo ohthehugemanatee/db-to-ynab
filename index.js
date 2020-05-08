@@ -17,7 +17,7 @@ const dbAuth = new ClientOAuth2({
   accessTokenUri: 'https://simulator-api.db.com/gw/oidc/token',
   authorizationUri: 'https://simulator-api.db.com/gw/oidc/authorize',
   redirectUri: 'https://cvert-dev.germany.vertesi.com/authorized',
-  scopes: ['read_transactions', 'read_accounts', 'read_credit_cards_list_with_details', 'read_credit_card_transactions']
+  scopes: ['read_transactions', 'read_accounts', 'read_credit_cards_list_with_details', 'read_credit_card_transactions', 'offline_access']
 }) 
 
 const {
