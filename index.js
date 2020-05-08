@@ -31,13 +31,16 @@ class DBAPI {
   async getConfig() {
     const { Issuer } = require('openid-client')
     try {
-    Issuer.discover('https://simulator-api.db.com/gw/oidc')
-    .then(function (dbIssuer) {
-      console.log('Discovered issuer %s %0', dbIssuer.issuer, dbIssuer.metadata)
-    })
-  } catch (error) {
-    console.log(error)
+      Issuer.discover('https://simulator-api.db.com/gw/oidc')
+      .then(function (dbIssuer) {
+        console.log('Discovered issuer %s %0', dbIssuer.issuer, dbIssuer.metadata)
+      })
+    } catch (error) {
+      console.log(error)
+    }
   }
+  async authorize() {
+    
   }
 }
 
