@@ -34,6 +34,8 @@ class DBAPI {
   constructor(props) {
     this.clientId = props.clientId
     this.clientSecret = props.clientSecret
+    this.dbAuth = props.dbAuth
+    this.dbUser = props.dbUser
   }
   async getConfig() {
     const { Issuer } = require('openid-client')
@@ -49,6 +51,19 @@ class DBAPI {
   authorize = function(req, res) {
     var uri = dbAuth.code.getUri()
     res.redirect(uri)
+  }
+
+  renew = function(req, res) {
+    dbAuth.code.getToken(req.originalUrl)
+    .then(function (user) {
+        // Refresh the current users access token.
+        user.refresh().then(function (updatedUser) {
+            console.log(updatedUser)
+            dbUser = updatedUser
+        })
+        console.log("Successfully authorized!")
+        res.status(200).send("Successfully authorized")
+    })
   }
 }
 
@@ -229,23 +244,20 @@ class YNAB {
 }
 
 exports.authorized = function (req, res) {
-  dbAuth.code.getToken(req.originalUrl)
-  .then(function (user) {
-      // Refresh the current users access token.
-      user.refresh().then(function (updatedUser) {
-          console.log(updatedUser !== user) //=> true
-          console.log(updatedUser.accessToken)
-      })
-      console.log("Successfully authorized!")
-      dbUser = user
-      res.status(200).send("Successfully authorized")
-  })
+  new DBAPI({
+    clientId: DB_CLIENT_ID,
+    clientSecret: DB_CLIENT_SECRET,
+    dbAuth: dbAuth,
+    dbUser: dbUser
+  }).renew(req, res)
 }
 
 exports.doIt = async (req, res) => {
   const dbAPI = new DBAPI({
     clientId: DB_CLIENT_ID,
     clientSecret: DB_CLIENT_SECRET,
+    dbAuth: dbAuth,
+    dbUser: dbUser
   })
   try {
     if (!dbUser.hasOwnProperty('accessToken')) {
