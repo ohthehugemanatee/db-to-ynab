@@ -18,8 +18,30 @@ const {
   ENABLE_SCREENSHOTS,
   YNAB_APIKEY,
   YNAB_BUDGET,
-  YNAB_ACCOUNT
+  YNAB_ACCOUNT,
+  DB_CLIENT_ID,
+  DB_CLIENT_SECRET,
+  DB_URI,
+  DB_API_ENABLED
 } = process.env
+class DBAPI {
+  constructor(props) {
+    this.clientId = props.clientId
+    this.clientSecret = props.clientSecret
+    this.issuerURI = props.issuerURI
+  }
+  async getConfig() {
+    const { Issuer } = require('openid-client')
+    try {
+    Issuer.discover(this.issuerURI)
+    .then(function (dbIssuer) {
+      console.log('Discovered issuer %s %0', dbIssuer.issuer, dbIssuer.metadata)
+    })
+  } catch (error) {
+    console.log(error)
+  }
+  }
+}
 
 class Browser {
   constructor(props) {
@@ -327,6 +349,22 @@ class YNAB {
 }
 
 exports.doIt = async (req, res) => {
+  if (DB_API_ENABLED) {
+    const dbAPI = new DBAPI({
+      clientId: DB_CLIENT_ID,
+      clientSecret: DB_CLIENT_SECRET,
+      issuerURI: DB_URI
+    })
+    try {
+      await dbAPI.getConfig()
+    } catch (error) {
+    console.error(error)
+    console.log('Error caught')
+    res.status(500).send(error)
+    }
+    res.status(200).send('Success')
+    return
+  }
   const db = new DB({
     account: ACCOUNT,
     branch: BRANCH,
